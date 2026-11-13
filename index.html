@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <title>Untitled</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" href="/style.css">
+  </head>
+
+  <body>
+    <!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ciencias de la Comunicación | USUR 2026-2029</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Archivo CSS Separado -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-slate-50 text-slate-800 h-full flex flex-col justify-between selection:bg-blue-600 selection:text-white">
+
+    <!-- HEADER / NAVIGATION -->
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-blue-100 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            
+            <!-- Logo & Title -->
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="goHome()">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-900 to-blue-700 flex items-center justify-center text-white shadow-md shadow-blue-900/30">
+                    <i class="fa-solid fa-graduation-cap text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-base sm:text-lg font-bold bg-gradient-to-r from-blue-900 to-blue-700 bg-clip-text text-transparent leading-tight">
+                        Ciencias de la Comunicación
+                    </h1>
+                    <p class="text-xs font-semibold text-blue-600 tracking-wide uppercase">
+                        Universidad del Sur • Gen. 2026-2029
+                    </p>
+                </div>
+            </div>
+
+            <!-- Navigation Links & User Menu -->
+            <div class="flex items-center space-x-3">
+                <nav class="hidden md:flex items-center space-x-1 mr-2">
+                    <button onclick="goHome()" id="navHomeBtn" class="px-4 py-2 rounded-xl text-sm font-semibold text-blue-800 bg-blue-50 transition-all">
+                        <i class="fa-solid fa-folder-open mr-1.5"></i> Álbumes
+                    </button>
+                    <button onclick="openMembersView()" id="navMembersBtn" class="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-800 hover:bg-blue-50/50 transition-all">
+                        <i class="fa-solid fa-users mr-1.5"></i> Miembros
+                    </button>
+                </nav>
+
+                <!-- Admin Create Album Button (Only Supreme Admin) -->
+                <button onclick="openCreateAlbumModal()" id="navCreateAlbumBtn" class="hidden items-center space-x-2 bg-blue-700 hover:bg-blue-800 text-white font-medium px-4 py-2.5 rounded-full shadow-md shadow-blue-700/20 transition-all text-sm">
+                    <i class="fa-solid fa-folder-plus text-xs"></i>
+                    <span class="hidden sm:inline">Nuevo Álbum</span>
+                </button>
+
+                <!-- Auth Section -->
+                <div id="authSection">
+                    <button onclick="loginWithGoogle()" id="loginBtn" class="flex items-center space-x-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-4 py-2.5 rounded-full border border-slate-200 shadow-sm transition-all text-sm">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+                        <span>Entrar con Google</span>
+                    </button>
+                    <div id="userProfileBadge" class="hidden items-center space-x-3 bg-blue-50/80 border border-blue-100 pl-2 pr-4 py-1.5 rounded-full">
+                        <img id="userAvatar" src="" alt="Avatar" class="w-8 h-8 rounded-full object-cover border border-blue-200">
+                        <div class="text-left leading-tight">
+                            <p id="userName" class="text-xs font-bold text-slate-800 truncate max-w-[100px] sm:max-w-[140px]"></p>
+                            <p id="userRoleBadge" class="text-[10px] font-semibold text-blue-700 uppercase">Miembro</p>
+                        </div>
+                        <button onclick="logout()" title="Cerrar sesión" class="text-slate-400 hover:text-blue-700 ml-2 transition-colors">
+                            <i class="fa-solid fa-right-from-bracket text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MOBILE SUBNAV -->
+    <div class="md:hidden bg-white border-b border-blue-100 flex items-center justify-around py-2 px-4 shadow-sm">
+        <button onclick="goHome()" id="mobileNavHomeBtn" class="flex items-center space-x-1.5 text-xs font-semibold text-blue-800 py-1.5 px-3 rounded-lg bg-blue-50">
+            <i class="fa-solid fa-folder-open"></i> <span>Álbumes</span>
+        </button>
+        <button onclick="openMembersView()" id="mobileNavMembersBtn" class="flex items-center space-x-1.5 text-xs font-medium text-slate-600 py-1.5 px-3 rounded-lg">
+            <i class="fa-solid fa-users"></i> <span>Miembros</span>
+        </button>
+    </div>
+
+    <!-- MAIN CONTENT CONTAINER -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- BREADCRUMBS -->
+        <div id="breadcrumbBar" class="flex items-center space-x-2 text-sm mb-6 text-slate-500">
+            <button onclick="goHome()" class="hover:text-blue-700 font-semibold transition-colors flex items-center space-x-1">
+                <i class="fa-solid fa-house text-xs mr-1"></i>
+                <span>Álbumes</span>
+            </button>
+            <span id="breadcrumbSeparator" class="hidden">/</span>
+            <span id="breadcrumbCurrent" class="text-blue-700 font-bold hidden"></span>
+        </div>
+
+        <!-- WELCOME BANNER (Home View) -->
+        <section id="homeBanner" class="mb-8 bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+            <div class="absolute -right-10 -bottom-10 opacity-10 text-9xl pointer-events-none">
+                <i class="fa-solid fa-photo-film"></i>
+            </div>
+            <div class="relative z-10 max-w-2xl">
+                <span class="inline-block bg-white/10 backdrop-blur-md text-blue-200 text-xs font-semibold px-3 py-1 rounded-full mb-3 uppercase tracking-wider">
+                    Blog Generacional Oficial • Universidad del Sur
+                </span>
+                <h2 class="text-2xl sm:text-3xl font-bold tracking-tight mb-2">
+                    Ciencias de la Comunicación • USUR 2026-2029
+                </h2>
+                <p class="text-blue-100 text-sm sm:text-base leading-relaxed font-light">
+                    Memoria gráfica colaborativa de nuestra generación. Inicia sesión con tu cuenta de Google para subir fotos a los álbumes institucionales y formar parte del directorio de miembros.
+                </p>
+                <div class="mt-5 flex items-center space-x-6 text-xs text-blue-200">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-folder text-blue-400"></i>
+                        <span id="statsAlbums">0 álbumes</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-images text-blue-400"></i>
+                        <span id="statsTotal">0 recuerdos</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 1: ALBUMS GRID -->
+        <section id="albumsView">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-lg font-bold text-slate-800 flex items-center space-x-2">
+                    <i class="fa-solid fa-folder-closed text-blue-700"></i>
+                    <span>Álbumes y Carpetas de la Generación</span>
+                </h3>
+                <span id="adminNotice" class="text-xs text-slate-400 italic">Solo el Admin Supremo (zapatos416@gmail.com) puede crear carpetas</span>
+            </div>
+
+            <!-- Albums Container -->
+            <div id="albumsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <!-- Injected via JS -->
+            </div>
+        </section>
+
+        <!-- VIEW 2: ALBUM PHOTOS (Masonry Feed) -->
+        <section id="photosView" class="hidden">
+            <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-blue-100 mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                    <span id="activeAlbumCategory" class="inline-block bg-blue-50 text-blue-800 text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider mb-2">
+                        Categoría
+                    </span>
+                    <h2 id="activeAlbumTitle" class="text-2xl font-bold text-slate-800">Nombre del Álbum</h2>
+                    <p id="activeAlbumDesc" class="text-slate-500 text-sm mt-1">Descripción...</p>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button onclick="openUploadModal()" id="uploadPhotoBtn" class="hidden bg-blue-700 hover:bg-blue-800 text-white font-medium px-5 py-2.5 rounded-2xl shadow-md shadow-blue-700/20 transition-all text-sm flex items-center space-x-2">
+                        <i class="fa-solid fa-cloud-arrow-up text-xs"></i>
+                        <span>Subir foto a este álbum</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Masonry Grid -->
+            <div id="galleryGrid" class="masonry-grid">
+                <!-- Injected via JS -->
+            </div>
+
+            <!-- Empty Photos State -->
+            <div id="emptyPhotosState" class="hidden text-center py-20 bg-white rounded-3xl border border-dashed border-slate-300 p-8 shadow-sm">
+                <div class="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto text-blue-600 mb-4 text-2xl">
+                    <i class="fa-solid fa-images"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-700 mb-1">Este álbum está vacío</h3>
+                <p class="text-slate-500 text-sm max-w-sm mx-auto mb-6">Inicia sesión para ser el primero en subir una fotografía de este recuerdo.</p>
+            </div>
+        </section>
+
+        <!-- VIEW 3: MEMBERS DIRECTORY -->
+        <section id="membersView" class="hidden">
+            <div class="bg-gradient-to-r from-blue-950 to-blue-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl mb-8">
+                <h2 class="text-2xl font-bold mb-2 flex items-center space-x-3">
+                    <i class="fa-solid fa-users text-blue-300"></i>
+                    <span>Miembros de la Página</span>
+                </h2>
+                <p class="text-blue-100 text-sm font-light">
+                    Directorio oficial de estudiantes y administradores registrados en la plataforma de Ciencias de la Comunicación USUR 2026-2029.
+                </p>
+            </div>
+
+            <div id="membersGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Injected via JS -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-white border-t border-blue-100 py-6 mt-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 space-y-3 sm:space-y-0">
+            <p>© 2026-2029 Ciencias de la Comunicación • Universidad del Sur</p>
+            <div class="flex items-center space-x-4">
+                <span id="footerAuthStatus" class="flex items-center text-slate-600 font-medium">
+                    <span class="w-2 h-2 rounded-full bg-slate-400 inline-block mr-1.5"></span>
+                    No autenticado
+                </span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- CREATE ALBUM MODAL (SUPREME ADMIN ONLY) -->
+    <div id="createAlbumModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden transform transition-all scale-95 opacity-0 duration-300" id="createAlbumModalContent">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center text-sm">
+                        <i class="fa-solid fa-folder-plus"></i>
+                    </div>
+                    <h3 class="font-bold text-slate-800 text-base">Crear Nuevo Álbum</h3>
+                </div>
+                <button onclick="closeCreateAlbumModal()" class="w-8 h-8 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-200 flex items-center justify-center transition-all">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <form id="createAlbumForm" onsubmit="handleCreateAlbum(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Título del Álbum <span class="text-blue-700">*</span></label>
+                    <input type="text" id="albumTitleInput" placeholder="Ej. Primer día de clases" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-blue-600">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Categoría</label>
+                    <select id="albumCategoryInput" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-blue-600">
+                        <option value="Clases">Clases y Talleres</option>
+                        <option value="Eventos">Eventos USUR</option>
+                        <option value="Proyectos">Proyectos y Grabaciones</option>
+                        <option value="Social">Vida Estudiantil</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Descripción breve <span class="text-blue-700">*</span></label>
+                    <textarea id="albumDescInput" rows="3" placeholder="¿De qué trata este álbum?" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-blue-600 resize-none"></textarea>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Foto de Portada (Desde galería local)</label>
+                    <input type="file" id="albumCoverFile" accept="image/*" required class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+                </div>
+                <div class="flex items-center justify-end space-x-3 pt-3">
+                    <button type="button" onclick="closeCreateAlbumModal()" class="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-100">Cancelar</button>
+                    <button type="submit" class="bg-blue-700 hover:bg-blue-800 text-white font-medium px-6 py-2.5 rounded-xl shadow-md text-sm">Crear Álbum</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- UPLOAD PHOTO MODAL -->
+    <div id="uploadModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden transform transition-all scale-95 opacity-0 duration-300" id="uploadModalContent">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center text-sm">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                    </div>
+                    <h3 class="font-bold text-slate-800 text-base">Subir Foto al Álbum</h3>
+                </div>
+                <button onclick="closeUploadModal()" class="w-8 h-8 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-200 flex items-center justify-center transition-all">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <form id="uploadForm" onsubmit="handleImageUpload(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Selecciona imagen de tu dispositivo <span class="text-blue-700">*</span></label>
+                    <div class="relative border-2 border-dashed border-slate-300 hover:border-blue-600 rounded-2xl p-6 text-center bg-slate-50 cursor-pointer group" onclick="document.getElementById('fileInput').click()">
+                        <input type="file" id="fileInput" accept="image/*" class="hidden" required onchange="previewSelectedFile(event)">
+                        <div id="dropzoneContent">
+                            <div class="w-12 h-12 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                                <i class="fa-solid fa-folder-open text-lg"></i>
+                            </div>
+                            <p class="text-sm font-medium text-slate-700 mb-1">Abrir galería de tu computadora o celular</p>
+                            <p class="text-xs text-slate-400">PNG, JPG, WEBP</p>
+                        </div>
+                        <div id="previewContainer" class="hidden">
+                            <img id="imagePreview" src="" alt="Vista previa" class="max-h-48 mx-auto rounded-xl shadow-md object-cover">
+                            <p class="text-xs text-blue-700 font-medium mt-2"><i class="fa-solid fa-check-circle mr-1"></i> Imagen cargada</p>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Título de la Foto <span class="text-blue-700">*</span></label>
+                    <input type="text" id="imageTitle" placeholder="Ej. Práctica en estudio de radio" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-blue-600">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Descripción detallada <span class="text-blue-700">*</span></label>
+                    <textarea id="imageDescription" rows="3" placeholder="Detalles de este momento..." required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-blue-600 resize-none"></textarea>
+                </div>
+                <div class="flex items-center justify-end space-x-3 pt-3">
+                    <button type="button" onclick="closeUploadModal()" class="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-100">Cancelar</button>
+                    <button type="submit" class="bg-blue-700 hover:bg-blue-800 text-white font-medium px-6 py-2.5 rounded-xl shadow-md text-sm">Publicar Foto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- PINTEREST STYLE DETAIL MODAL -->
+    <div id="detailModal" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-md hidden flex items-center justify-center p-2 sm:p-6 overflow-y-auto">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-4xl w-full overflow-hidden flex flex-col md:flex-row transform transition-all scale-95 opacity-0 duration-300 my-auto" id="detailModalContent">
+            <div class="md:w-3/5 bg-slate-950 flex items-center justify-center p-4 relative min-h-[300px] md:min-h-[500px]">
+                <button onclick="closeDetailModal()" class="absolute top-4 left-4 md:hidden z-10 w-9 h-9 rounded-full bg-white/20 text-white flex items-center justify-center backdrop-blur-md">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <img id="detailImage" src="" alt="Detalle" class="max-h-[80vh] w-auto object-contain rounded-xl shadow-lg">
+            </div>
+            <div class="md:w-2/5 p-6 sm:p-8 flex flex-col justify-between bg-white overflow-y-auto max-h-[85vh]">
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <span id="detailCategory" class="bg-blue-50 text-blue-800 text-xs font-semibold px-3 py-1 rounded-full uppercase">Álbum</span>
+                        <button onclick="closeDetailModal()" class="hidden md:flex w-8 h-8 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 items-center justify-center">
+                            <i class="fa-solid fa-xmark text-lg"></i>
+                        </button>
+                    </div>
+                    <h2 id="detailTitle" class="text-xl sm:text-2xl font-bold text-slate-800 mb-3">Título</h2>
+                    <div class="flex items-center text-xs text-slate-500 mb-4 bg-slate-100 px-3 py-2 rounded-xl space-x-2">
+                        <i class="fa-regular fa-clock text-blue-700"></i>
+                        <span id="detailTimestamp">Fecha</span>
+                    </div>
+                    <div class="flex items-center space-x-3 mb-6 pb-4 border-b border-slate-100">
+                        <img id="detailAuthorAvatar" src="" alt="Autor" class="w-10 h-10 rounded-full object-cover border border-blue-200">
+                        <div>
+                            <p class="text-xs text-slate-400 uppercase font-semibold">Subido por</p>
+                            <p id="detailAuthorName" class="text-sm font-medium text-slate-700">Autor</p>
+                        </div>
+                    </div>
+                    <div class="mb-6">
+                        <h4 class="text-xs font-bold text-slate-400 uppercase mb-2">Descripción del Momento</h4>
+                        <p id="detailDescription" class="text-slate-600 text-sm leading-relaxed whitespace-pre-line"></p>
+                    </div>
+                </div>
+                <div class="pt-4 border-t border-slate-100 flex items-center justify-between">
+                    <button id="deletePhotoBtn" onclick="deleteCurrentPost()" class="hidden text-rose-600 hover:text-rose-800 text-xs font-semibold flex items-center space-x-1.5">
+                        <i class="fa-solid fa-trash-can"></i>
+                        <span>Eliminar fotografía (Admin Supremo)</span>
+                    </button>
+                    <span class="text-xs font-medium text-slate-400">USUR 2026-2029</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NOTIFICATION TOAST -->
+    <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center space-x-3 text-sm">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toastMessage">Acción realizada con éxito</span>
+    </div>
+
+    <!-- Archivo JS Externo -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>
+    <script type="module" src="/script.js"></script>
+  </body>
+
+</html>
