@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, query, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Tus credenciales oficiales de Firebase (Proyecto: generacion-2026)
 const firebaseConfig = {
@@ -16,10 +16,15 @@ const firebaseConfig = {
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'usur-comunicacion-2026';
 const SUPREME_ADMIN_EMAIL = "zapatos416@gmail.com";
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
+// Initialize Firebase safely
+let app, db, auth;
+try {
+    app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+    auth = getAuth(app);
+} catch (err) {
+    console.error("Error initializing Firebase:", err);
+}
 
 // App State
 let currentUser = null;
@@ -27,64 +32,75 @@ let isSupremeAdmin = false;
 let albums = [];
 let posts = [];
 let members = [];
-let currentAlbumId = null;
-let currentView = 'albums';
+let currentAlbumId = null; 
+let currentView = 'albums'; 
 let currentSelectedPostId = null;
 let selectedFileBase64 = null;
 
 window.addEventListener('DOMContentLoaded', async () => {
+    // Initialize Auth safely
     try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-            await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-            await signInAnonymously(auth);
+        if (auth) {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
+
+            onAuthStateChanged(auth, async (user) => {
+                if (user && !user.isAnonymous) {
+                    currentUser = user;
+                    isSupremeAdmin = (user.email === SUPREME_ADMIN_EMAIL);
+                    
+                    try {
+                        const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
+                        await setDoc(userRef, {
+                            uid: user.uid,
+                            name: user.displayName || 'Estudiante USUR',
+                            email: user.email || '',
+                            photoURL: user.photoURL || 'https://placehold.co/150x150/1e3a8a/white?text=User',
+                            role: isSupremeAdmin ? 'Admin Supremo' : 'Miembro',
+                            lastLogin: new Date().toISOString()
+                        }, { merge: true });
+                    } catch(err) {
+                        console.error("Error saving user profile:", err);
+                    }
+
+                    updateAuthUI();
+                } else {
+                    currentUser = null;
+                    isSupremeAdmin = false;
+                    updateAuthUI();
+                }
+                
+                setupFirestoreListeners();
+            });
         }
     } catch (e) {
         console.warn("Auth initialization fallback:", e);
+        loadFallbackAlbums();
+        loadFallbackPosts();
     }
-
-    onAuthStateChanged(auth, async (user) => {
-        if (user && !user.isAnonymous) {
-            currentUser = user;
-            isSupremeAdmin = (user.email === SUPREME_ADMIN_EMAIL);
-            
-            try {
-                const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
-                await setDoc(userRef, {
-                    uid: user.uid,
-                    name: user.displayName || 'Estudiante USUR',
-                    email: user.email || '',
-                    photoURL: user.photoURL || 'https://placehold.co/150x150/1e3a8a/white?text=User',
-                    role: isSupremeAdmin ? 'Admin Supremo' : 'Miembro',
-                    lastLogin: new Date().toISOString()
-                }, { merge: true });
-            } catch(err) {
-                console.error("Error saving user profile:", err);
-            }
-
-            updateAuthUI();
-        } else {
-            currentUser = null;
-            isSupremeAdmin = false;
-            updateAuthUI();
-        }
-        
-        setupFirestoreListeners();
-    });
 });
 
+// Expose auth functions globally for HTML event handlers
 window.loginWithGoogle = async function() {
+    if (!auth) {
+        showToast("Error: Firebase Auth no está inicializado", "error");
+        return;
+    }
     const provider = new GoogleAuthProvider();
     try {
         await signInWithPopup(auth, provider);
         showToast("¡Sesión iniciada correctamente!", "success");
     } catch (error) {
         console.error("Google sign in error:", error);
-        showToast("Error al iniciar sesión con Google", "error");
+        showToast("Error al iniciar sesión con Google (verifica dominios autorizados)", "error");
     }
 };
 
 window.logout = async function() {
+    if (!auth) return;
     try {
         await signOut(auth);
         await signInAnonymously(auth);
@@ -103,37 +119,43 @@ function updateAuthUI() {
     const adminNotice = document.getElementById('adminNotice');
 
     if (currentUser && !currentUser.isAnonymous) {
-        loginBtn.classList.add('hidden');
-        userProfileBadge.classList.remove('hidden');
-        document.getElementById('userAvatar').src = currentUser.photoURL || 'https://placehold.co/150x150/1e3a8a/white?text=User';
-        document.getElementById('userName').innerText = currentUser.displayName || 'Usuario';
+        if(loginBtn) loginBtn.classList.add('hidden');
+        if(userProfileBadge) userProfileBadge.classList.remove('hidden');
+        const avatarEl = document.getElementById('userAvatar');
+        const nameEl = document.getElementById('userName');
+        if(avatarEl) avatarEl.src = currentUser.photoURL || 'https://placehold.co/150x150/1e3a8a/white?text=User';
+        if(nameEl) nameEl.innerText = currentUser.displayName || 'Usuario';
         
         const roleBadge = document.getElementById('userRoleBadge');
-        if (isSupremeAdmin) {
-            roleBadge.innerText = 'Admin Supremo';
-            roleBadge.className = 'text-[10px] font-bold text-blue-800 uppercase';
-            navCreateAlbumBtn.classList.remove('hidden');
-            if(adminNotice) adminNotice.innerText = 'Modo Admin Supremo Activo (zapatos416@gmail.com)';
-        } else {
-            roleBadge.innerText = 'Miembro Gen 26-29';
-            roleBadge.className = 'text-[10px] font-semibold text-blue-700 uppercase';
-            navCreateAlbumBtn.classList.add('hidden');
-            if(adminNotice) adminNotice.innerText = 'Cualquier miembro autenticado puede subir fotos a los álbumes';
+        if (roleBadge) {
+            if (isSupremeAdmin) {
+                roleBadge.innerText = 'Admin Supremo';
+                roleBadge.className = 'text-[10px] font-bold text-blue-800 uppercase';
+                if(navCreateAlbumBtn) navCreateAlbumBtn.classList.remove('hidden');
+                if(adminNotice) adminNotice.innerText = 'Modo Admin Supremo Activo (zapatos416@gmail.com)';
+            } else {
+                roleBadge.innerText = 'Miembro Gen 26-29';
+                roleBadge.className = 'text-[10px] font-semibold text-blue-700 uppercase';
+                if(navCreateAlbumBtn) navCreateAlbumBtn.classList.add('hidden');
+                if(adminNotice) adminNotice.innerText = 'Cualquier miembro autenticado puede subir fotos a los álbumes';
+            }
         }
 
-        footerAuthStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 inline-block mr-1.5"></span>Conectado como ${currentUser.displayName || currentUser.email}`;
+        if(footerAuthStatus) footerAuthStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 inline-block mr-1.5"></span>Conectado como ${currentUser.displayName || currentUser.email}`;
     } else {
-        loginBtn.classList.remove('hidden');
-        userProfileBadge.classList.add('hidden');
-        navCreateAlbumBtn.classList.add('hidden');
+        if(loginBtn) loginBtn.classList.remove('hidden');
+        if(userProfileBadge) userProfileBadge.classList.add('hidden');
+        if(navCreateAlbumBtn) navCreateAlbumBtn.classList.add('hidden');
         if(adminNotice) adminNotice.innerText = 'Inicia sesión con Google para subir fotos y participar';
-        footerAuthStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-slate-400 inline-block mr-1.5"></span>Modo Visitante (Inicia sesión para subir fotos)`;
+        if(footerAuthStatus) footerAuthStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-slate-400 inline-block mr-1.5"></span>Modo Visitante (Inicia sesión para subir fotos)`;
     }
 
     renderView();
 }
 
+// Firestore Realtime Listeners
 function setupFirestoreListeners() {
+    if (!db) return;
     try {
         const albumsQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'albums'));
         onSnapshot(albumsQuery, (snapshot) => {
@@ -184,6 +206,7 @@ function setupFirestoreListeners() {
 }
 
 async function seedDefaultAlbums() {
+    if (!db) return;
     const defaults = [
         {
             title: 'Primer día de clases',
@@ -235,10 +258,13 @@ function loadFallbackPosts() {
 }
 
 function updateStats() {
-    document.getElementById('statsAlbums').innerText = `${albums.length} álbumes`;
-    document.getElementById('statsTotal').innerText = `${posts.length} recuerdos`;
+    const statsAlbums = document.getElementById('statsAlbums');
+    const statsTotal = document.getElementById('statsTotal');
+    if(statsAlbums) statsAlbums.innerText = `${albums.length} álbumes`;
+    if(statsTotal) statsTotal.innerText = `${posts.length} recuerdos`;
 }
 
+// Navigation & Views (Guaranteed click responsiveness)
 window.goHome = function() {
     currentView = 'albums';
     currentAlbumId = null;
@@ -267,15 +293,15 @@ function setActiveNav(tab) {
     const mobileMembers = document.getElementById('mobileNavMembersBtn');
 
     if (tab === 'home') {
-        homeBtn.className = 'px-4 py-2 rounded-xl text-sm font-semibold text-blue-800 bg-blue-50 transition-all';
-        membersBtn.className = 'px-4 py-2 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-800 hover:bg-blue-50/50 transition-all';
-        mobileHome.className = 'flex items-center space-x-1.5 text-xs font-semibold text-blue-800 py-1.5 px-3 rounded-lg bg-blue-50';
-        mobileMembers.className = 'flex items-center space-x-1.5 text-xs font-medium text-slate-600 py-1.5 px-3 rounded-lg';
+        if(homeBtn) homeBtn.className = 'px-4 py-2 rounded-xl text-sm font-semibold text-blue-800 bg-blue-50 transition-all';
+        if(membersBtn) membersBtn.className = 'px-4 py-2 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-800 hover:bg-blue-50/50 transition-all';
+        if(mobileHome) mobileHome.className = 'flex items-center space-x-1.5 text-xs font-semibold text-blue-800 py-1.5 px-3 rounded-lg bg-blue-50';
+        if(mobileMembers) mobileMembers.className = 'flex items-center space-x-1.5 text-xs font-medium text-slate-600 py-1.5 px-3 rounded-lg';
     } else {
-        membersBtn.className = 'px-4 py-2 rounded-xl text-sm font-semibold text-blue-800 bg-blue-50 transition-all';
-        homeBtn.className = 'px-4 py-2 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-800 hover:bg-blue-50/50 transition-all';
-        mobileMembers.className = 'flex items-center space-x-1.5 text-xs font-semibold text-blue-800 py-1.5 px-3 rounded-lg bg-blue-50';
-        mobileHome.className = 'flex items-center space-x-1.5 text-xs font-medium text-slate-600 py-1.5 px-3 rounded-lg';
+        if(membersBtn) membersBtn.className = 'px-4 py-2 rounded-xl text-sm font-semibold text-blue-800 bg-blue-50 transition-all';
+        if(homeBtn) homeBtn.className = 'px-4 py-2 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-800 hover:bg-blue-50/50 transition-all';
+        if(mobileMembers) mobileMembers.className = 'flex items-center space-x-1.5 text-xs font-semibold text-blue-800 py-1.5 px-3 rounded-lg bg-blue-50';
+        if(mobileHome) mobileHome.className = 'flex items-center space-x-1.5 text-xs font-medium text-slate-600 py-1.5 px-3 rounded-lg';
     }
 }
 
@@ -287,49 +313,58 @@ function renderView() {
     const breadcrumbSeparator = document.getElementById('breadcrumbSeparator');
     const breadcrumbCurrent = document.getElementById('breadcrumbCurrent');
 
-    albumsView.classList.add('hidden');
-    photosView.classList.add('hidden');
-    membersView.classList.add('hidden');
-    homeBanner.classList.add('hidden');
+    if(albumsView) albumsView.classList.add('hidden');
+    if(photosView) photosView.classList.add('hidden');
+    if(membersView) membersView.classList.add('hidden');
+    if(homeBanner) homeBanner.classList.add('hidden');
 
     if (currentView === 'albums') {
-        albumsView.classList.remove('hidden');
-        homeBanner.classList.remove('hidden');
-        breadcrumbSeparator.classList.add('hidden');
-        breadcrumbCurrent.classList.add('hidden');
+        if(albumsView) albumsView.classList.remove('hidden');
+        if(homeBanner) homeBanner.classList.remove('hidden');
+        if(breadcrumbSeparator) breadcrumbSeparator.classList.add('hidden');
+        if(breadcrumbCurrent) breadcrumbCurrent.classList.add('hidden');
         renderAlbumsGrid();
     } else if (currentView === 'photos') {
-        photosView.classList.remove('hidden');
-        breadcrumbSeparator.classList.remove('hidden');
-        breadcrumbCurrent.classList.remove('hidden');
+        if(photosView) photosView.classList.remove('hidden');
+        if(breadcrumbSeparator) breadcrumbSeparator.classList.remove('hidden');
+        if(breadcrumbCurrent) breadcrumbCurrent.classList.remove('hidden');
 
         const album = albums.find(a => a.id === currentAlbumId);
         if (album) {
-            breadcrumbCurrent.innerText = album.title;
-            document.getElementById('activeAlbumTitle').innerText = album.title;
-            document.getElementById('activeAlbumCategory').innerText = album.category;
-            document.getElementById('activeAlbumDesc').innerText = album.description;
+            const bcCur = document.getElementById('breadcrumbCurrent');
+            const actTitle = document.getElementById('activeAlbumTitle');
+            const actCat = document.getElementById('activeAlbumCategory');
+            const actDesc = document.getElementById('activeAlbumDesc');
+            if(bcCur) bcCur.innerText = album.title;
+            if(actTitle) actTitle.innerText = album.title;
+            if(actCat) actCat.innerText = album.category;
+            if(actDesc) actDesc.innerText = album.description;
         }
 
         const uploadBtn = document.getElementById('uploadPhotoBtn');
-        if (currentUser && !currentUser.isAnonymous) {
-            uploadBtn.classList.remove('hidden');
-        } else {
-            uploadBtn.classList.add('hidden');
+        if (uploadBtn) {
+            if (currentUser && !currentUser.isAnonymous) {
+                uploadBtn.classList.remove('hidden');
+            } else {
+                uploadBtn.classList.add('hidden');
+            }
         }
 
         renderPhotosGrid();
     } else if (currentView === 'members') {
-        membersView.classList.remove('hidden');
-        breadcrumbSeparator.classList.remove('hidden');
-        breadcrumbCurrent.classList.remove('hidden');
-        breadcrumbCurrent.innerText = 'Miembros de la Página';
+        if(membersView) membersView.classList.remove('hidden');
+        if(breadcrumbSeparator) breadcrumbSeparator.classList.remove('hidden');
+        if(breadcrumbCurrent) {
+            breadcrumbCurrent.classList.remove('hidden');
+            breadcrumbCurrent.innerText = 'Miembros de la Página';
+        }
         renderMembersGrid();
     }
 }
 
 function renderAlbumsGrid(searchQuery = '') {
     const grid = document.getElementById('albumsGrid');
+    if (!grid) return;
     let filtered = albums.filter(a => a.title.toLowerCase().includes(searchQuery) || a.description.toLowerCase().includes(searchQuery));
 
     if (filtered.length === 0) {
@@ -375,6 +410,7 @@ function renderAlbumsGrid(searchQuery = '') {
 function renderPhotosGrid(searchQuery = '') {
     const grid = document.getElementById('galleryGrid');
     const emptyState = document.getElementById('emptyPhotosState');
+    if (!grid) return;
 
     let filtered = posts.filter(p => p.albumId === currentAlbumId && (
         p.title.toLowerCase().includes(searchQuery) ||
@@ -384,11 +420,11 @@ function renderPhotosGrid(searchQuery = '') {
 
     if (filtered.length === 0) {
         grid.innerHTML = '';
-        emptyState.classList.remove('hidden');
+        if(emptyState) emptyState.classList.remove('hidden');
         return;
     }
 
-    emptyState.classList.add('hidden');
+    if(emptyState) emptyState.classList.add('hidden');
 
     grid.innerHTML = filtered.map(post => `
         <div class="masonry-item bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-blue-100 group cursor-pointer flex flex-col" onclick="openDetailModal('${post.id}')">
@@ -420,6 +456,7 @@ function renderPhotosGrid(searchQuery = '') {
 
 function renderMembersGrid() {
     const grid = document.getElementById('membersGrid');
+    if (!grid) return;
     if (members.length === 0) {
         grid.innerHTML = `<div class="col-span-full text-center py-12 text-slate-400 text-sm">Cargando miembros...</div>`;
         return;
@@ -455,25 +492,34 @@ window.openCreateAlbumModal = function() {
         showToast("Acceso restringido: Solo el Admin Supremo puede crear álbumes", "error");
         return;
     }
-    document.getElementById('createAlbumModal').classList.remove('hidden');
+    const modal = document.getElementById('createAlbumModal');
+    const content = document.getElementById('createAlbumModalContent');
+    if(modal) modal.classList.remove('hidden');
     setTimeout(() => {
-        document.getElementById('createAlbumModalContent').classList.remove('scale-95', 'opacity-0');
-        document.getElementById('createAlbumModalContent').classList.add('scale-100', 'opacity-100');
+        if(content) {
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+        }
     }, 10);
 };
 
 window.closeCreateAlbumModal = function() {
-    document.getElementById('createAlbumModalContent').classList.remove('scale-100', 'opacity-100');
-    document.getElementById('createAlbumModalContent').classList.add('scale-95', 'opacity-0');
+    const modal = document.getElementById('createAlbumModal');
+    const content = document.getElementById('createAlbumModalContent');
+    const form = document.getElementById('createAlbumForm');
+    if(content) {
+        content.classList.remove('scale-100', 'opacity-100');
+        content.classList.add('scale-95', 'opacity-0');
+    }
     setTimeout(() => {
-        document.getElementById('createAlbumModal').classList.add('hidden');
-        document.getElementById('createAlbumForm').reset();
+        if(modal) modal.classList.add('hidden');
+        if(form) form.reset();
     }, 300);
 };
 
 window.handleCreateAlbum = async function(event) {
     event.preventDefault();
-    if (!isSupremeAdmin) return;
+    if (!isSupremeAdmin || !db) return;
 
     const title = document.getElementById('albumTitleInput').value.trim();
     const category = document.getElementById('albumCategoryInput').value;
@@ -506,21 +552,32 @@ window.openUploadModal = function() {
         showToast("Debes iniciar sesión con Google para subir fotos", "error");
         return;
     }
-    document.getElementById('uploadModal').classList.remove('hidden');
+    const modal = document.getElementById('uploadModal');
+    const content = document.getElementById('uploadModalContent');
+    if(modal) modal.classList.remove('hidden');
     setTimeout(() => {
-        document.getElementById('uploadModalContent').classList.remove('scale-95', 'opacity-0');
-        document.getElementById('uploadModalContent').classList.add('scale-100', 'opacity-100');
+        if(content) {
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+        }
     }, 10);
 };
 
 window.closeUploadModal = function() {
-    document.getElementById('uploadModalContent').classList.remove('scale-100', 'opacity-100');
-    document.getElementById('uploadModalContent').classList.add('scale-95', 'opacity-0');
+    const modal = document.getElementById('uploadModal');
+    const content = document.getElementById('uploadModalContent');
+    const form = document.getElementById('uploadForm');
+    if(content) {
+        content.classList.remove('scale-100', 'opacity-100');
+        content.classList.add('scale-95', 'opacity-0');
+    }
     setTimeout(() => {
-        document.getElementById('uploadModal').classList.add('hidden');
-        document.getElementById('uploadForm').reset();
-        document.getElementById('previewContainer').classList.add('hidden');
-        document.getElementById('dropzoneContent').classList.remove('hidden');
+        if(modal) modal.classList.add('hidden');
+        if(form) form.reset();
+        const prev = document.getElementById('previewContainer');
+        const drop = document.getElementById('dropzoneContent');
+        if(prev) prev.classList.add('hidden');
+        if(drop) drop.classList.remove('hidden');
         selectedFileBase64 = null;
     }, 300);
 };
@@ -529,15 +586,18 @@ window.previewSelectedFile = async function(event) {
     const file = event.target.files[0];
     if (file) {
         selectedFileBase64 = await fileToBase64(file);
-        document.getElementById('imagePreview').src = selectedFileBase64;
-        document.getElementById('dropzoneContent').classList.add('hidden');
-        document.getElementById('previewContainer').classList.remove('hidden');
+        const imgPrev = document.getElementById('imagePreview');
+        const drop = document.getElementById('dropzoneContent');
+        const prev = document.getElementById('previewContainer');
+        if(imgPrev) imgPrev.src = selectedFileBase64;
+        if(drop) drop.classList.add('hidden');
+        if(prev) prev.classList.remove('hidden');
     }
 };
 
 window.handleImageUpload = async function(event) {
     event.preventDefault();
-    if (!currentUser || currentUser.isAnonymous) return;
+    if (!currentUser || currentUser.isAnonymous || !db) return;
 
     const title = document.getElementById('imageTitle').value.trim();
     const description = document.getElementById('imageDescription').value.trim();
@@ -583,51 +643,65 @@ window.openDetailModal = function(postId) {
     currentSelectedPostId = postId;
     const album = albums.find(a => a.id === post.albumId);
 
-    document.getElementById('detailImage').src = post.imageUrl;
-    document.getElementById('detailCategory').innerText = album ? album.title : 'Álbum';
-    document.getElementById('detailTitle').innerText = post.title;
-    document.getElementById('detailAuthorName').innerText = post.authorName || 'Estudiante';
-    document.getElementById('detailAuthorAvatar').src = post.authorAvatar || 'https://placehold.co/150';
-    document.getElementById('detailDescription').innerText = post.description;
+    const detImg = document.getElementById('detailImage');
+    const detCat = document.getElementById('detailCategory');
+    const detTit = document.getElementById('detailTitle');
+    const detAuth = document.getElementById('detailAuthorName');
+    const detAv = document.getElementById('detailAuthorAvatar');
+    const detDesc = document.getElementById('detailDescription');
+    const detTime = document.getElementById('detailTimestamp');
+
+    if(detImg) detImg.src = post.imageUrl;
+    if(detCat) detCat.innerText = album ? album.title : 'Álbum';
+    if(detTit) detTit.innerText = post.title;
+    if(detAuth) detAuth.innerText = post.authorName || 'Estudiante';
+    if(detAv) detAv.src = post.authorAvatar || 'https://placehold.co/150';
+    if(detDesc) detDesc.innerText = post.description;
 
     try {
         const [datePart, timePart] = post.timestamp.split(' ');
         const [year, month, day] = datePart.split('-');
         const monthsFull = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-        document.getElementById('detailTimestamp').innerText = `Publicado el ${day} de ${monthsFull[parseInt(month, 10)-1]} de ${year} a las ${timePart} hrs`;
+        if(detTime) detTime.innerText = `Publicado el ${day} de ${monthsFull[parseInt(month, 10)-1]} de ${year} a las ${timePart} hrs`;
     } catch (e) {
-        document.getElementById('detailTimestamp').innerText = post.timestamp;
+        if(detTime) detTime.innerText = post.timestamp;
     }
 
     const deleteBtn = document.getElementById('deletePhotoBtn');
-    if (isSupremeAdmin) {
-        deleteBtn.classList.remove('hidden');
-    } else {
-        deleteBtn.classList.add('hidden');
+    if (deleteBtn) {
+        if (isSupremeAdmin) {
+            deleteBtn.classList.remove('hidden');
+        } else {
+            deleteBtn.classList.add('hidden');
+        }
     }
 
     const modal = document.getElementById('detailModal');
     const content = document.getElementById('detailModalContent');
-    modal.classList.remove('hidden');
+    if(modal) modal.classList.remove('hidden');
     setTimeout(() => {
-        content.classList.remove('scale-95', 'opacity-0');
-        content.classList.add('scale-100', 'opacity-100');
+        if(content) {
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+        }
     }, 10);
 };
 
 window.closeDetailModal = function() {
     const modal = document.getElementById('detailModal');
     const content = document.getElementById('detailModalContent');
-    content.classList.remove('scale-100', 'opacity-100');
-    content.classList.add('scale-95', 'opacity-0');
+    if(content) {
+        content.classList.remove('scale-100', 'opacity-100');
+        content.classList.add('scale-95', 'opacity-0');
+    }
     setTimeout(() => {
-        modal.classList.add('hidden');
+        if(modal) modal.classList.add('hidden');
         currentSelectedPostId = null;
     }, 300);
 };
 
 window.deleteCurrentPost = async function() {
-    if (!isSupremeAdmin) {
+    if (!isSupremeAdmin || !db) {
         showToast("Acceso restringido: Solo el Admin Supremo puede eliminar fotos", "error");
         return;
     }
@@ -656,6 +730,8 @@ function showToast(message, type = 'success') {
     const toast = document.getElementById('toast');
     const toastMessage = document.getElementById('toastMessage');
     const toastIcon = document.getElementById('toastIcon');
+
+    if(!toast || !toastMessage || !toastIcon) return;
 
     toastMessage.innerText = message;
     toastIcon.className = type === 'error' ? 'fa-solid fa-circle-exclamation text-rose-400' : 'fa-solid fa-circle-check text-emerald-400';
