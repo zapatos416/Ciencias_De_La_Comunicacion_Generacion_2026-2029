@@ -2,17 +2,18 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebas
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Global environment variables provided by framework
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'usur-comunicacion-2026';
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-    apiKey: "AIzaSyDummyKeyForLocalTesting12345",
-    authDomain: "usur-blog.firebaseapp.com",
-    projectId: "usur-blog",
-    storageBucket: "usur-blog.appspot.com",
-    messagingSenderId: "123456789",
-    appId: "1:123456789:web:abcdef"
+// Tus credenciales oficiales de Firebase (Proyecto: generacion-2026)
+const firebaseConfig = {
+    apiKey: "AIzaSyAotgvwqogdtmHt3Co40BlR153aLDd29uQ",
+    authDomain: "generacion-2026.firebaseapp.com",
+    projectId: "generacion-2026",
+    storageBucket: "generacion-2026.firebasestorage.app",
+    messagingSenderId: "126634090587",
+    appId: "1:126634090587:web:3c261a95366078a5a85f7e",
+    measurementId: "G-Z345ZL2Z3Q"
 };
 
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'usur-comunicacion-2026';
 const SUPREME_ADMIN_EMAIL = "zapatos416@gmail.com";
 
 // Initialize Firebase
@@ -26,13 +27,12 @@ let isSupremeAdmin = false;
 let albums = [];
 let posts = [];
 let members = [];
-let currentAlbumId = null; // null = Home (Albums grid)
-let currentView = 'albums'; // 'albums' | 'photos' | 'members'
+let currentAlbumId = null;
+let currentView = 'albums';
 let currentSelectedPostId = null;
 let selectedFileBase64 = null;
 
 window.addEventListener('DOMContentLoaded', async () => {
-    // Initialize Auth
     try {
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
             await signInWithCustomToken(auth, __initial_auth_token);
@@ -73,7 +73,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 });
 
-// Expose auth functions globally for HTML event handlers
 window.loginWithGoogle = async function() {
     const provider = new GoogleAuthProvider();
     try {
@@ -134,7 +133,6 @@ function updateAuthUI() {
     renderView();
 }
 
-// Firestore Realtime Listeners
 function setupFirestoreListeners() {
     try {
         const albumsQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'albums'));
@@ -241,7 +239,6 @@ function updateStats() {
     document.getElementById('statsTotal').innerText = `${posts.length} recuerdos`;
 }
 
-// Navigation & Views
 window.goHome = function() {
     currentView = 'albums';
     currentAlbumId = null;
@@ -453,7 +450,6 @@ function formatShortDate(timestampStr) {
     }
 }
 
-// CREATE ALBUM MODAL
 window.openCreateAlbumModal = function() {
     if (!isSupremeAdmin) {
         showToast("Acceso restringido: Solo el Admin Supremo puede crear álbumes", "error");
@@ -505,7 +501,6 @@ window.handleCreateAlbum = async function(event) {
     }
 };
 
-// UPLOAD PHOTO MODAL
 window.openUploadModal = function() {
     if (!currentUser || currentUser.isAnonymous) {
         showToast("Debes iniciar sesión con Google para subir fotos", "error");
@@ -581,7 +576,6 @@ window.handleImageUpload = async function(event) {
     }
 };
 
-// PINTEREST DETAIL MODAL
 window.openDetailModal = function(postId) {
     const post = posts.find(p => p.id === postId);
     if (!post) return;
