@@ -38,7 +38,6 @@ let selectedFileBase64 = null;
 window.addEventListener('DOMContentLoaded', async () => {
     try {
         if (auth) {
-            // Manejar el resultado si se usó redirección
             try {
                 const redirectResult = await getRedirectResult(auth);
                 if (redirectResult && redirectResult.user) {
@@ -90,7 +89,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-// Método de inicio de sesión con redirección automática (Evita bloqueos de popup en dominios personalizados)
 window.loginWithGoogle = async function() {
     if (!auth) {
         showToast("Error: Firebase Auth no está inicializado", "error");
@@ -98,7 +96,6 @@ window.loginWithGoogle = async function() {
     }
     const provider = new GoogleAuthProvider();
     try {
-        // Intentar primero con popup; si el navegador lo bloquea, usar redirect automáticamente
         await signInWithPopup(auth, provider);
         showToast("¡Sesión iniciada correctamente!", "success");
     } catch (error) {
@@ -276,6 +273,7 @@ function updateStats() {
     if(statsTotal) statsTotal.innerText = `${posts.length} recuerdos`;
 }
 
+// Global functions exposed safely for window scope
 window.goHome = function() {
     currentView = 'albums';
     currentAlbumId = null;
