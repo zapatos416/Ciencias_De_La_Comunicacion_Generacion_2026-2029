@@ -7,13 +7,13 @@ const firebaseConfig = {
     apiKey: "AIzaSyAotgvwqogdtmHt3Co40BlR153aLDd29uQ",
     authDomain: "generacion-2026.firebaseapp.com",
     projectId: "generacion-2026",
-    storageBucket: "generacion-2026.firebasestorage.app",
+    storageBucket: "generacion-2026.appspot.com",
     messagingSenderId: "126634090587",
     appId: "1:126634090587:web:3c261a95366078a5a85f7e",
     measurementId: "G-Z345ZL2Z3Q"
 };
 
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'usur-comunicacion-2026';
+const appId = 'ciencias-comunicacion-usur-2026';
 const SUPREME_ADMIN_EMAIL = "zapatos416@gmail.com";
 
 // Initialize Firebase safely
@@ -38,7 +38,6 @@ let currentSelectedPostId = null;
 let selectedFileBase64 = null;
 
 window.addEventListener('DOMContentLoaded', async () => {
-    // Initialize Auth safely
     try {
         if (auth) {
             if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
@@ -83,7 +82,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-// Expose auth functions globally for HTML event handlers
 window.loginWithGoogle = async function() {
     if (!auth) {
         showToast("Error: Firebase Auth no está inicializado", "error");
@@ -153,7 +151,6 @@ function updateAuthUI() {
     renderView();
 }
 
-// Firestore Realtime Listeners
 function setupFirestoreListeners() {
     if (!db) return;
     try {
@@ -264,7 +261,6 @@ function updateStats() {
     if(statsTotal) statsTotal.innerText = `${posts.length} recuerdos`;
 }
 
-// Navigation & Views (Guaranteed click responsiveness)
 window.goHome = function() {
     currentView = 'albums';
     currentAlbumId = null;
