@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, query, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Tus credenciales oficiales de Firebase (Proyecto: generacion-2026)
@@ -16,7 +16,6 @@ const firebaseConfig = {
 const appId = 'ciencias-comunicacion-usur-2026';
 const SUPREME_ADMIN_EMAIL = "zapatos416@gmail.com";
 
-// Initialize Firebase safely
 let app, db, auth;
 try {
     app = initializeApp(firebaseConfig);
@@ -26,7 +25,6 @@ try {
     console.error("Error initializing Firebase:", err);
 }
 
-// App State
 let currentUser = null;
 let isSupremeAdmin = false;
 let albums = [];
@@ -40,9 +38,17 @@ let selectedFileBase64 = null;
 window.addEventListener('DOMContentLoaded', async () => {
     try {
         if (auth) {
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
-            } else {
+            // Manejar el resultado si se usó redirección
+            try {
+                const redirectResult = await getRedirectResult(auth);
+                if (redirectResult && redirectResult.user) {
+                    currentUser = redirectResult.user;
+                }
+            } catch (redirErr) {
+                console.log("No redirect result:", redirErr);
+            }
+
+            if (!currentUser) {
                 await signInAnonymously(auth);
             }
 
@@ -67,9 +73,11 @@ window.addEventListener('DOMContentLoaded', async () => {
 
                     updateAuthUI();
                 } else {
-                    currentUser = null;
-                    isSupremeAdmin = false;
-                    updateAuthUI();
+                    if (!currentUser || currentUser.isAnonymous) {
+                        currentUser = null;
+                        isSupremeAdmin = false;
+                        updateAuthUI();
+                    }
                 }
                 
                 setupFirestoreListeners();
@@ -82,6 +90,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
+// Método de inicio de sesión con redirección automática (Evita bloqueos de popup en dominios personalizados)
 window.loginWithGoogle = async function() {
     if (!auth) {
         showToast("Error: Firebase Auth no está inicializado", "error");
@@ -89,11 +98,17 @@ window.loginWithGoogle = async function() {
     }
     const provider = new GoogleAuthProvider();
     try {
+        // Intentar primero con popup; si el navegador lo bloquea, usar redirect automáticamente
         await signInWithPopup(auth, provider);
         showToast("¡Sesión iniciada correctamente!", "success");
     } catch (error) {
-        console.error("Google sign in error:", error);
-        showToast("Error al iniciar sesión con Google (verifica dominios autorizados)", "error");
+        console.warn("Popup blocked or failed, attempting redirect method...", error);
+        try {
+            await signInWithRedirect(auth, provider);
+        } catch (redirError) {
+            console.error("Google sign in error:", redirError);
+            showToast("Error al iniciar sesión con Google", "error");
+        }
     }
 };
 
